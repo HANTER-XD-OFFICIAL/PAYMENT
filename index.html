@@ -1,0 +1,61 @@
+<!-- index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Payment Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    .card { max-width:420px; margin: auto; border:1px solid #ddd; padding:12px; border-radius:8px; }
+    .icons { display:flex; gap:10px; margin-bottom:10px; }
+    .paybtn { width:100%; padding:14px; border:none; background:#bfc; font-size:18px; border-radius:8px; }
+    input, select { width:100%; padding:10px; margin:6px 0; box-sizing:border-box; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3>Recharge — Demo</h3>
+    <div class="icons">
+      <!-- Replace with real icons -->
+      <div>Rocket</div><div>Bkash</div><div>Card</div><div>Netbank</div>
+    </div>
+
+    <label>Amount (BDT)</label>
+    <input id="amount" type="number" value="10" />
+
+    <label>Payment method</label>
+    <select id="method">
+      <option value="card">Card</option>
+      <option value="mobile_wallet">Mobile Wallet</option>
+      <option value="netbanking">Net Banking</option>
+    </select>
+
+    <button id="pay" class="paybtn">PAY <span id="amt">10.00 BDT</span></button>
+    <p id="msg"></p>
+  </div>
+
+  <script>
+    document.getElementById('amount').addEventListener('input', e=>{
+      document.getElementById('amt').innerText = parseFloat(e.target.value||0).toFixed(2)+' BDT';
+    });
+
+    document.getElementById('pay').addEventListener('click', async ()=>{
+      const amount = document.getElementById('amount').value;
+      const method = document.getElementById('method').value;
+      const res = await fetch('/create-payment', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify({ amount, method })
+      });
+      const data = await res.json();
+      if(data.checkoutUrl){
+        // open hosted checkout
+        window.open(data.checkoutUrl, '_blank');
+        document.getElementById('msg').innerText = 'Checkout opened. After payment, check status by visiting: /status/' + data.paymentId;
+      } else {
+        document.getElementById('msg').innerText = 'Error: ' + (data.error||'unknown');
+      }
+    });
+  </script>
+</body>
+</html>
