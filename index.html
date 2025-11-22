@@ -3,21 +3,25 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Payment Demo</title>
+  <title>Payment Demo — Sonali Bank Transfer</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 16px; }
-    .card { max-width:420px; margin: auto; border:1px solid #ddd; padding:12px; border-radius:8px; }
-    .icons { display:flex; gap:10px; margin-bottom:10px; }
-    .paybtn { width:100%; padding:14px; border:none; background:#bfc; font-size:18px; border-radius:8px; }
-    input, select { width:100%; padding:10px; margin:6px 0; box-sizing:border-box; }
+    body { font-family: Arial, sans-serif; padding: 16px; background:#f6f6f6; }
+    .card { max-width:420px; margin: auto; background:white; border:1px solid #eee; padding:16px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.03); }
+    .icons { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;}
+    .paybtn { width:100%; padding:12px; border:none; background:#4CAF50; color:white; font-size:16px; border-radius:6px; cursor:pointer; }
+    input, select, button { width:100%; padding:10px; margin:8px 0; box-sizing:border-box; }
+    .bankcard { border:1px dashed #ccc; padding:12px; border-radius:6px; margin:10px 0; }
+    .small { font-size:13px; color:#666; }
   </style>
 </head>
 <body>
   <div class="card">
     <h3>Recharge — Demo</h3>
     <div class="icons">
-      <!-- Replace with real icons -->
-      <div>Rocket</div><div>Bkash</div><div>Card</div><div>Netbank</div>
+      <div style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">Rocket</div>
+      <div style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">bKash</div>
+      <div style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">Card</div>
+      <div style="padding:6px 10px;border:2px solid #4CAF50;border-radius:6px;background:#f0fff4;">Sonali Bank</div>
     </div>
 
     <label>Amount (BDT)</label>
@@ -27,35 +31,57 @@
     <select id="method">
       <option value="card">Card</option>
       <option value="mobile_wallet">Mobile Wallet</option>
+      <option value="bank_transfer" selected>Bank Transfer (Sonali)</option>
       <option value="netbanking">Net Banking</option>
     </select>
 
-    <button id="pay" class="paybtn">PAY <span id="amt">10.00 BDT</span></button>
+    <div id="bankDetails" class="bankcard">
+      <strong>Sonali Bank</strong>
+      <p class="small">Account number: <span id="accNum">0701301000064</span> <button onclick="copyText('#accNum')">Copy</button></p>
+      <p class="small">Account name: <span id="accName">MD RASEL</span></p>
+      <p class="small">Branch: <span id="branch">AKKALPUR</span></p>
+      <p class="small">Mobile wallet (for contact): <strong id="wallet">01882278234</strong> <button onclick="copyText('#wallet')">Copy</button></p>
+      <p class="small">Important: When transferring, put reference shown after you click CREATE BANK TRANSFER.</p>
+    </div>
+
+    <button id="pay" class="paybtn">CREATE BANK TRANSFER</button>
     <p id="msg"></p>
+
+    <hr>
+    <h4>Check status</h4>
+    <input id="checkId" placeholder="Enter payment id" />
+    <button onclick="checkStatus()">Check</button>
+    <pre id="statusBox"></pre>
   </div>
 
-  <script>
-    document.getElementById('amount').addEventListener('input', e=>{
-      document.getElementById('amt').innerText = parseFloat(e.target.value||0).toFixed(2)+' BDT';
-    });
+<script>
+  function copyText(selector){
+    const text = document.querySelector(selector).innerText;
+    navigator.clipboard.writeText(text).then(()=> alert('Copied: ' + text));
+  }
 
-    document.getElementById('pay').addEventListener('click', async ()=>{
-      const amount = document.getElementById('amount').value;
-      const method = document.getElementById('method').value;
-      const res = await fetch('/create-payment', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ amount, method })
-      });
-      const data = await res.json();
-      if(data.checkoutUrl){
-        // open hosted checkout
-        window.open(data.checkoutUrl, '_blank');
-        document.getElementById('msg').innerText = 'Checkout opened. After payment, check status by visiting: /status/' + data.paymentId;
-      } else {
-        document.getElementById('msg').innerText = 'Error: ' + (data.error||'unknown');
-      }
+  document.getElementById('pay').addEventListener('click', async ()=>{
+    const amount = document.getElementById('amount').value;
+    const res = await fetch('/create-bank-transfer', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ amount })
     });
-  </script>
+    const data = await res.json();
+    if (data.payment_id) {
+      document.getElementById('msg').innerText = `Payment created. Reference: ${data.payRef}. Payment ID: ${data.payment_id}. Upload screenshot at /upload-screenshot/${data.payment_id}`;
+    } else {
+      document.getElementById('msg').innerText = 'Error: ' + (data.error||'unknown');
+    }
+  });
+
+  async function checkStatus(){
+    const id = document.getElementById('checkId').value;
+    if(!id) return alert('Enter payment id');
+    const res = await fetch('/status/' + id);
+    const j = await res.json();
+    document.getElementById('statusBox').innerText = JSON.stringify(j, null, 2);
+  }
+</script>
 </body>
 </html>
